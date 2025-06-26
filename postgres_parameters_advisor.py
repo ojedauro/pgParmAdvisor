@@ -33,7 +33,7 @@ max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_v
 #server_cpus_match = re.search(r'\d+', server_class)
 #server_cpus = st.sidebar.selectbox("Max CPUs", int(server_cpus_match.group()) if server_cpus_match else 0)
 server_cpus = st.sidebar.number_input("CPUs", min_value=2, max_value=512, value=4)
-storage_type = st.sidebar.selectbox("Storage Type", ["SSD", "SSD_v2", "SSD_ultra"])
+#storage_type = st.sidebar.selectbox("Storage Type", ["SSD", "SSD_v2", "SSD_ultra"])
 storage_size = st.sidebar.number_input("Storage Size (GB)", min_value=10, max_value=65536, value=100)
 #storage_iops = st.sidebar.selectbox(
 #    "Storage IOPS",
