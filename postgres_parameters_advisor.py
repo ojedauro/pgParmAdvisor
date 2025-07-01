@@ -49,7 +49,7 @@ db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"]
 # Simulated logic for parameter recommendations
 def get_recommendations(memory, role):
     base = {
-        "shared_buffers": int(memory * 0.25),
+        "shared_buffers": int(memory * 1024 * 0.25),
         "work_mem": int(memory * 1024 / max_connections),
         "maintenance_work_mem": int(memory * 1024 * 0.1),
         "effective_cache_size": int(memory * 1024 * 0.75),
