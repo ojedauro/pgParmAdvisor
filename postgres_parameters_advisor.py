@@ -51,8 +51,8 @@ def get_recommendations(memory, role):
     base = {
         "shared_buffers": int(memory * 0.25),
         "work_mem": int(memory * 1024 / max_connections),
-        "maintenance_work_mem": int(memory * 0.1),
-        "effective_cache_size": int(memory * 0.75),
+        "maintenance_work_mem": int(memory * 1024 * 0.1),
+        "effective_cache_size": int(memory * 1024 * 0.75),
         "random_page_cost": 1,
         "default_statistics_target": 100,
         "from_collapse_limit": 40,
