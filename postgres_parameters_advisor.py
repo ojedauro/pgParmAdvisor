@@ -17,7 +17,7 @@ st.title("Parameters Advisor for Azure PostgreSQL Flex Server")
 
 # Sidebar inputs
 st.sidebar.header("Input Configuration")
-
+db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"])
 pg_version = st.sidebar.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"])
 max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_value=10000, value=100)
 #server_tier = st.sidebar.selectbox("Server Tier", ["General Purpose", "Memory Optimized", "Compute Optimized"])
@@ -43,7 +43,6 @@ storage_size = st.sidebar.number_input("Storage Size (GB)", min_value=10, max_va
 #    ]
 #)
 memory_gb = st.sidebar.number_input("Memory (GB)", min_value=2, max_value=512, value=4)
-db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"])
 #db_size = st.sidebar.number_input("Database Size (GB)", min_value=1, max_value=65536, value=50)
 
 # Simulated logic for parameter recommendations
