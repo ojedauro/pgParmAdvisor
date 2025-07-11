@@ -51,7 +51,7 @@ def get_recommendations(memory, role):
     base = {
         "shared_buffers": int(memory * 1024 * 0.25),
         #"work_mem": int(memory * 1024 / max_connections), # Remove dependency of max_connections
-        "maintenance_work_mem": int(memory * 1024 * 0.1),
+        #"maintenance_work_mem": int(memory * 1024 * 0.1),
         "effective_cache_size": int(memory * 1024 * 0.75),
         "random_page_cost": 1,
         "default_statistics_target": 100,
@@ -113,12 +113,13 @@ def get_recommendations(memory, role):
             "max_worker_processes": f"{int(base['max_worker_processes'] * factor_max_par_workers[profile])}",
             "max_parallel_workers_per_gather": f"{int(base['max_parallel_workers_per_gather'] * factor_max_par_workers_gather[profile])}",
             "max_parallel_maintenance_workers": f"{int(base['max_parallel_maintenance_workers'] * factor_max_par_workers_gather[profile])}",
+            "autovacuum": f"ON",
         }
 
     return recommendations
 
 # Generate recommendations
-recommendations = get_recommendations(int(memory_gb * 1024), db_role)
+recommendations = get_recommendations(int(memory_gb), db_role)
 
 # Display results in a table
 #st.header("Recommended PostgreSQL Parameters")
