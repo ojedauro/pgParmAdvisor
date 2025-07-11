@@ -68,36 +68,42 @@ def get_recommendations(memory, role):
         factor_random_page_cost = {"conservative": 1.2, "balanced": 1.1, "aggressive": 1.08}
         factor_default_statistics_target = {"conservative": 5, "balanced": 20, "aggressive": 50}
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 16, "balanced": 32, "aggressive": 64}
     elif role == "OLAP":
         factor_general = {"conservative": 1.0, "balanced": 1.2, "aggressive": 1.5}
         factor_random_page_cost = {"conservative": 1.1, "balanced": 1.08, "aggressive": 1.05} # Favours more full scans than using indexes
         factor_default_statistics_target = {"conservative": 5, "balanced": 10, "aggressive": 30}
         factor_collapse_limits = {"conservative": 1.2, "balanced": 1.5, "aggressive": 2} # Assuming OLAP will have larger queries with more JOINs
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
     elif role == "RAG": # For RAG basically increase memory
         factor_general = {"conservative": 1, "balanced": 1.25, "aggressive": 1.5}
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
     else:  # Mixed
         factor_general = {"conservative": 0.9, "balanced": 1.1, "aggressive": 1.3}
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
 
     factor_max_par_workers = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
     factor_max_par_workers_gather = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
+    maintenance_work_mem_setting = {"conservative": 1, "balanced": 1, "aggressive": 2} 
 
     recommendations = {}
     for profile in ["conservative", "balanced", "aggressive"]:
         recommendations[profile] = {
-            "shared_buffers": f"{int(base['shared_buffers'] * factor_general[profile])}MB",
+            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
             #"work_mem": f"{int(base['work_mem'] * factor_general[profile])}kB",
-            "work_mem": f"{int(work_mem_setting[profile])}kB",
-            "maintenance_work_mem": f"{int(base['maintenance_work_mem'] * factor_general[profile])}MB",
+            "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
+            #"maintenance_work_mem": f"{int(base['maintenance_work_mem'] * factor_general[profile])}MB",
+            "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
             #"effective_cache_size": f"{int(base['effective_cache_size'] * factor_general[profile])}MB", # Shash says the default 75% of mem never caused any issues, so leave it
             "random_page_cost": f"{base['random_page_cost'] * factor_random_page_cost[profile]}",
             "default_statistics_target": f"{int(base['default_statistics_target'] * factor_default_statistics_target[profile])}",
