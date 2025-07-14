@@ -20,6 +20,7 @@ st.title("Parameters Advisor for Azure PostgreSQL Flex Server")
 
 # Sidebar inputs
 st.sidebar.header("Input Configuration")
+
 support_ticket = st.sidebar.text_input("Support Ticket ID")
 email = st.sidebar.text_input("Email Address")
 
@@ -40,6 +41,8 @@ db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"]
 pg_version = st.sidebar.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
 server_cpus = st.sidebar.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192], disabled=not inputs_enabled)
 memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832], disabled=not inputs_enabled)
+=======
+
 
 #max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_value=10000, value=100) # Shash said the default is 5k max and should be left as it is
 #server_tier = st.sidebar.selectbox("Server Tier", ["General Purpose", "Memory Optimized", "Compute Optimized"])
@@ -136,6 +139,7 @@ def get_recommendations(memory, role):
 
     return recommendations
 
+
 if inputs_enabled:
     recommendations = get_recommendations(int(memory_gb), db_role)
     table_data = {
@@ -150,6 +154,7 @@ if inputs_enabled:
         table_data["Balanced Profile"].append(recommendations["balanced"][param])
         table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
     df = pd.DataFrame(table_data)
+
 
     # --- Usage Auditing ---
     audit_entry = {
