@@ -41,7 +41,7 @@ db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"]
 pg_version = st.sidebar.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
 server_cpus = st.sidebar.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192], disabled=not inputs_enabled)
 memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832], disabled=not inputs_enabled)
-=======
+
 
 
 #max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_value=10000, value=100) # Shash said the default is 5k max and should be left as it is
