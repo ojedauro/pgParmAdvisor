@@ -10,7 +10,7 @@ body {
 }
 </style>
 """, unsafe_allow_html=True)
-#st.image("https://learn.microsoft.com/en-us/media/logos/logo-ms-social.png", width=100)
+
 st.image("https://azure.microsoft.com/svghandler/postgresql?width=100", width=100)
 st.warning('This tool is under testing. Use it at your own risk!', icon="⚠️")
 st.title("Parameters Advisor for Azure PostgreSQL Flex Server")
