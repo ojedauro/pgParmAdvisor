@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-#import re
+import re
 
 # Title
 st.markdown("""
@@ -17,9 +17,9 @@ st.title("Parameters Advisor for Azure PostgreSQL Flex Server")
 
 # Sidebar inputs
 st.sidebar.header("Input Configuration")
-support_ticket = st.sidebar.text_input("Support Ticket ID (required)")
-email = st.sidebar.text_input("Email Address (required)")
-import re
+support_ticket = st.sidebar.text_input("Support Ticket ID")
+email = st.sidebar.text_input("Email Address")
+
 def is_valid_email(email):
     pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
     return re.match(pattern, email)
