@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
 import re
+import json
+import os
+from datetime import datetime
 
 # Title
 st.markdown("""
@@ -148,15 +151,23 @@ if inputs_enabled:
         table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
     df = pd.DataFrame(table_data)
 
-    # Custom HTML/CSS for background image
-    st.markdown(
-        '''<div style="position:relative; width:100%; min-height:520px;">
-            <img src="https://learn.microsoft.com/en-us/media/logos/logo-ms-social.png" style="position:absolute; left:50%; top:50%; transform:translate(-50%,-50%); opacity:0.15; z-index:0; width:300px; height:auto; pointer-events:none;" />
-            <div style="position:relative; z-index:1;">
-        ''', unsafe_allow_html=True)
-    st.dataframe(df, hide_index=True, height=500)
-    st.markdown('</div></div>', unsafe_allow_html=True)
+    # --- Usage Auditing ---
+    audit_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "support_ticket": support_ticket,
+        "email": email,
+        "db_role": db_role,
+        "pg_version": pg_version,
+        "server_cpus": server_cpus,
+        "memory_gb": memory_gb,
+        "recommendations": recommendations
+    }
+    audit_file = "usage_audit.json"  # JSON Lines format
+    # Append the entry as a single line
+    with open(audit_file, "a", encoding="utf-8") as f:
+        f.write(json.dumps(audit_entry) + "\n")
 
+    st.dataframe(df, hide_index=True, height=500)
     csv = df.to_csv(index=False).encode('utf-8')
     st.download_button("Download CSV", csv, "postgresql_recommendations.csv", "text/csv")
 else:
