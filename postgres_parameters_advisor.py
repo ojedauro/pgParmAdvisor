@@ -1,6 +1,9 @@
 import streamlit as st
 import pandas as pd
-#import re
+import re
+import json
+import os
+from datetime import datetime
 
 # Title
 st.markdown("""
@@ -10,17 +13,36 @@ body {
 }
 </style>
 """, unsafe_allow_html=True)
-#st.image("https://learn.microsoft.com/en-us/media/logos/logo-ms-social.png", width=100)
+
 st.image("https://azure.microsoft.com/svghandler/postgresql?width=100", width=100)
 st.warning('This tool is under testing. Use it at your own risk!', icon="⚠️")
 st.title("Parameters Advisor for Azure PostgreSQL Flex Server")
 
 # Sidebar inputs
 st.sidebar.header("Input Configuration")
-db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"])
-pg_version = st.sidebar.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"])
-server_cpus = st.sidebar.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192])
-memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832])
+
+support_ticket = st.sidebar.text_input("Support Ticket ID")
+email = st.sidebar.text_input("Email Address")
+
+def is_valid_email(email):
+    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+    return re.match(pattern, email)
+
+inputs_enabled = bool(support_ticket.strip()) and bool(email.strip()) and is_valid_email(email)
+
+if not bool(support_ticket.strip()):
+    st.sidebar.warning("Support Ticket ID is required.")
+if not bool(email.strip()):
+    st.sidebar.warning("Email address is required.")
+elif email and not is_valid_email(email):
+    st.sidebar.warning("Please enter a valid email address.")
+
+db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"], disabled=not inputs_enabled)
+pg_version = st.sidebar.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
+server_cpus = st.sidebar.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192], disabled=not inputs_enabled)
+memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832], disabled=not inputs_enabled)
+=======
+
 
 #max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_value=10000, value=100) # Shash said the default is 5k max and should be left as it is
 #server_tier = st.sidebar.selectbox("Server Tier", ["General Purpose", "Memory Optimized", "Compute Optimized"])
@@ -46,7 +68,6 @@ memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160
 #)
 #db_size = st.sidebar.number_input("Database Size (GB)", min_value=1, max_value=65536, value=50)
 
-# Simulated logic for parameter recommendations
 def get_recommendations(memory, role):
     base = {
         "shared_buffers": int(memory * 1024 * 0.25),
@@ -118,28 +139,41 @@ def get_recommendations(memory, role):
 
     return recommendations
 
-# Generate recommendations
-recommendations = get_recommendations(int(memory_gb), db_role)
 
-# Display results in a table
-#st.header("Recommended PostgreSQL Parameters")
+if inputs_enabled:
+    recommendations = get_recommendations(int(memory_gb), db_role)
+    table_data = {
+        "Parameter": [],
+        "Conservative Profile": [],
+        "Balanced Profile": [],
+        "Aggressive Profile": []
+    }
+    for param in recommendations["conservative"].keys():
+        table_data["Parameter"].append(param)
+        table_data["Conservative Profile"].append(recommendations["conservative"][param])
+        table_data["Balanced Profile"].append(recommendations["balanced"][param])
+        table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
+    df = pd.DataFrame(table_data)
 
-table_data = {
-    "Parameter": [],
-    "Conservative Profile": [],
-    "Balanced Profile": [],
-    "Aggressive Profile": []
-}
 
-for param in recommendations["conservative"].keys():
-    table_data["Parameter"].append(param)
-    table_data["Conservative Profile"].append(recommendations["conservative"][param])
-    table_data["Balanced Profile"].append(recommendations["balanced"][param])
-    table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
+    # --- Usage Auditing ---
+    audit_entry = {
+        "timestamp": datetime.utcnow().isoformat(),
+        "support_ticket": support_ticket,
+        "email": email,
+        "db_role": db_role,
+        "pg_version": pg_version,
+        "server_cpus": server_cpus,
+        "memory_gb": memory_gb,
+        "recommendations": recommendations
+    }
+    audit_file = "usage_audit.json"  # JSON Lines format
+    # Append the entry as a single line
+    with open(audit_file, "a", encoding="utf-8") as f:
+        f.write(json.dumps(audit_entry) + "\n")
 
-df = pd.DataFrame(table_data)
-st.dataframe(df, hide_index=True, height=500)
-
-# Option to download as CSV
-csv = df.to_csv(index=False).encode('utf-8')
-st.download_button("Download CSV", csv, "postgresql_recommendations.csv", "text/csv")
+    st.dataframe(df, hide_index=True, height=500)
+    csv = df.to_csv(index=False).encode('utf-8')
+    st.download_button("Download CSV", csv, "postgresql_recommendations.csv", "text/csv")
+else:
+    st.info("Please enter both a valid Support Ticket ID and Email Address to use the advisor.")
