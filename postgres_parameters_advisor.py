@@ -56,6 +56,7 @@ memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160
 #server_cpus = st.sidebar.selectbox("Max CPUs", int(server_cpus_match.group()) if server_cpus_match else 0)
 #storage_type = st.sidebar.selectbox("Storage Type", ["SSD", "SSD_v2", "SSD_ultra"]) # commenting it out as not being used to adjust any parameter
 #storage_size = st.sidebar.number_input("Storage Size (GB)", min_value=10, max_value=65536, value=100) # Irrelevant for now...
+#storage_size = st.sidebar.number_input("Storage Size (GB)", min_value=10, max_value=65536, value=100) # Irrelevant for now...
 #storage_iops = st.sidebar.selectbox(
 #    "Storage IOPS",
 #    [
@@ -67,6 +68,10 @@ memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160
 
 def get_recommendations(memory, role):
     base = {
+        "shared_buffers": int(memory * 1024 * 0.25),
+        #"work_mem": int(memory * 1024 / max_connections), # Remove dependency of max_connections
+        #"maintenance_work_mem": int(memory * 1024 * 0.1),
+        "effective_cache_size": int(memory * 1024 * 0.75),
         "shared_buffers": int(memory * 1024 * 0.25),
         #"work_mem": int(memory * 1024 / max_connections), # Remove dependency of max_connections
         #"maintenance_work_mem": int(memory * 1024 * 0.1),
@@ -88,6 +93,8 @@ def get_recommendations(memory, role):
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 16, "balanced": 32, "aggressive": 64}
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        work_mem_setting = {"conservative": 16, "balanced": 32, "aggressive": 64}
     elif role == "OLAP":
         factor_general = {"conservative": 1.0, "balanced": 1.2, "aggressive": 1.5}
         factor_random_page_cost = {"conservative": 1.1, "balanced": 1.08, "aggressive": 1.05} # Favours more full scans than using indexes
@@ -95,10 +102,15 @@ def get_recommendations(memory, role):
         factor_collapse_limits = {"conservative": 1.2, "balanced": 1.5, "aggressive": 2} # Assuming OLAP will have larger queries with more JOINs
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
+        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
     elif role == "RAG": # For RAG basically increase memory
         factor_general = {"conservative": 1, "balanced": 1.25, "aggressive": 1.5}
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
+        factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
+        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
@@ -109,14 +121,23 @@ def get_recommendations(memory, role):
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
+        factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
 
     factor_max_par_workers = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
     factor_max_par_workers_gather = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
+    maintenance_work_mem_setting = {"conservative": 1, "balanced": 1, "aggressive": 2} 
     maintenance_work_mem_setting = {"conservative": 1, "balanced": 1, "aggressive": 2} 
 
     recommendations = {}
     for profile in ["conservative", "balanced", "aggressive"]:
         recommendations[profile] = {
+            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
+            #"work_mem": f"{int(base['work_mem'] * factor_general[profile])}kB",
+            "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
+            #"maintenance_work_mem": f"{int(base['maintenance_work_mem'] * factor_general[profile])}MB",
+            "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
+            #"effective_cache_size": f"{int(base['effective_cache_size'] * factor_general[profile])}MB", # Shash says the default 75% of mem never caused any issues, so leave it
             "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
             #"work_mem": f"{int(base['work_mem'] * factor_general[profile])}kB",
             "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
@@ -131,6 +152,7 @@ def get_recommendations(memory, role):
             "max_worker_processes": f"{int(base['max_worker_processes'] * factor_max_par_workers[profile])}",
             "max_parallel_workers_per_gather": f"{int(base['max_parallel_workers_per_gather'] * factor_max_par_workers_gather[profile])}",
             "max_parallel_maintenance_workers": f"{int(base['max_parallel_maintenance_workers'] * factor_max_par_workers_gather[profile])}",
+            "autovacuum": f"ON",
             "autovacuum": f"ON",
         }
 
