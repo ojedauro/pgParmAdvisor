@@ -168,7 +168,7 @@ if 'submitted' in locals() and submitted and inputs_enabled:
     }
 
     # Azure Blob SAS URL
-    AZURE_BLOB_SAS_URL = st.AZURE_URL + st.AUDIT_FILE + "?" + st.AZURE_TOKEN # Get secrets from Streamlit secrets management
+    AZURE_BLOB_SAS_URL = st.secrets["AZURE_URL"] + st.secrets["AUDIT_FILE"] + "?" + st.secrets["AZURE_TOKEN"] # Get secrets from Streamlit secrets management
 
     # Try to append the entry to the blob
     try:
