@@ -1,27 +1,27 @@
 import streamlit as st
 import pandas as pd
 import json
-import os
 import re
 from datetime import datetime
 
-# Title
-st.markdown("""
-<style>
-h1, h2, h3, h4, h5, h6 {
-    text-align: center;
-}
-img {
-    display: block;
-    margin-left: auto;
-    margin-right: auto;
-}
-</style>
-""", unsafe_allow_html=True)
-
-st.image("https://azure.microsoft.com/svghandler/postgresql?width=100", width=100)
 st.warning('This tool is under testing. Use it at your own risk!', icon="⚠️")
-st.title("Parameters Advisor for Azure PostgreSQL Flex Server")
+
+# Custom header with logo left of title
+st.markdown(
+    '''<style>
+    h1, h2, h3, h4, h5, h6 {
+        text-align: center;
+    }
+    img {
+        display: block;
+        margin-left: auto;
+        margin-right: auto;
+    }
+    </style>
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
+        <img src="https://azure.microsoft.com/svghandler/postgresql?width=100" style="height:60px; width:auto;" alt="PostgreSQL Logo" />
+        <h1 style="margin:0;">Parameters Advisor for Azure PostgreSQL Flex Server</h1>
+    </div>''', unsafe_allow_html=True)
 
 # Sidebar inputs
 st.sidebar.header("Input Configuration")
@@ -139,7 +139,6 @@ def get_recommendations(memory, role):
             "max_parallel_maintenance_workers": f"{int(base['max_parallel_maintenance_workers'] * factor_max_par_workers_gather[profile])}",
             "autovacuum": f"ON",
         }
-
     return recommendations
 
 
@@ -169,7 +168,7 @@ if inputs_enabled:
         "memory_gb": memory_gb,
         "recommendations": recommendations
     }
-    audit_file = "usage_audit.json"  # JSON Lines format
+    audit_file = "usage_audit.jsonl"  # JSON Lines format
     # Append the entry as a single line
     with open(audit_file, "a", encoding="utf-8") as f:
         f.write(json.dumps(audit_entry) + "\n")
