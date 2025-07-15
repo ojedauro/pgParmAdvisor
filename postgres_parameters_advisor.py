@@ -29,30 +29,27 @@ st.markdown(
         <h1 style="margin:0;">Parameters Advisor for Azure PostgreSQL Flex Server</h1>
     </div>""", unsafe_allow_html=True)
 
-# Sidebar inputs
-st.sidebar.markdown('<img src="https://swimburger.net/media/ppnn3pcl/azure.png" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure" />', unsafe_allow_html=True)
-st.sidebar.header("Input Configuration")
-
-support_ticket = st.sidebar.text_input("Support Ticket ID")
-email = st.sidebar.text_input("Email Address")
-
-def is_valid_email(email):
-    pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
-    return re.match(pattern, email)
-
-inputs_enabled = bool(support_ticket.strip()) and bool(email.strip()) and is_valid_email(email)
-
-if not bool(support_ticket.strip()):
-    st.sidebar.warning("Support Ticket ID is required.")
-if not bool(email.strip()):
-    st.sidebar.warning("Email address is required.")
-elif email and not is_valid_email(email):
-    st.sidebar.warning("Please enter a valid email address.")
-
-db_role = st.sidebar.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"], disabled=not inputs_enabled)
-pg_version = st.sidebar.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
-server_cpus = st.sidebar.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192], disabled=not inputs_enabled)
-memory_gb = st.sidebar.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832], disabled=not inputs_enabled)
+with st.sidebar:
+    st.markdown('<img src="https://swimburger.net/media/ppnn3pcl/azure.png" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure" />', unsafe_allow_html=True)
+    st.header("Input Configuration")
+    with st.form(key="input_form"):
+        support_ticket = st.text_input("Support Ticket ID")
+        email = st.text_input("Email Address")
+        def is_valid_email(email):
+            pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+            return re.match(pattern, email)
+        inputs_enabled = bool(support_ticket.strip()) and bool(email.strip()) and is_valid_email(email)
+        if not bool(support_ticket.strip()):
+            st.warning("Support Ticket ID is required.")
+        if not bool(email.strip()):
+            st.warning("Email address is required.")
+        elif email and not is_valid_email(email):
+            st.warning("Please enter a valid email address.")
+        db_role = st.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"], disabled=not inputs_enabled)
+        pg_version = st.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
+        server_cpus = st.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192], disabled=not inputs_enabled)
+        memory_gb = st.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832], disabled=not inputs_enabled)
+        submitted = st.form_submit_button("Submit")
 
 #max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_value=10000, value=100) # Shash said the default is 5k max and should be left as it is
 #server_tier = st.sidebar.selectbox("Server Tier", ["General Purpose", "Memory Optimized", "Compute Optimized"])
@@ -148,7 +145,8 @@ def get_recommendations(memory, role):
         }
     return recommendations
 
-if inputs_enabled:
+# Only process and save when the form is submitted
+if 'submitted' in locals() and submitted and inputs_enabled:
     recommendations = get_recommendations(int(memory_gb), db_role)
     table_data = {
         "Parameter": [],
@@ -178,7 +176,7 @@ if inputs_enabled:
     # Azure Blob SAS URL (replace with your actual SAS URL)
     AUDIT_FILE = "usage_audit.jsonl"
     AZURE_BLOB_SAS_TOKEN = "st=2025-07-14T22:00:00Z&se=2035-12-31T22:59:59Z&si=openit&spr=https&sv=2024-11-04&sr=c&sig=OuTDIUA7bwWg3wpaFaTF7OarvbSxW4bwiVv938bANIA%3D"
-    AZURE_BLOB_SAS_URL = "https://pgparmsadvisorstorage.blob.core.windows.net/publicopened/" + AUDIT_FILE + "?" + AZURE_BLOB_SAS_TOKEN  # Example: https://<account>.blob.core.windows.net/<container>/<blob>?<SAS_token>
+    AZURE_BLOB_SAS_URL = "https://pgparmsadvisorstorage.blob.core.windows.net/publicopened/" + AUDIT_FILE + "?" + AZURE_BLOB_SAS_TOKEN
 
     # Try to append the entry to the blob
     try:
@@ -206,5 +204,5 @@ if inputs_enabled:
     st.dataframe(df, hide_index=True, height=500)
     csv = df.to_csv(index=False).encode('utf-8')
     st.download_button("Download CSV", csv, "postgresql_recommendations.csv", "text/csv")
-else:
+elif 'submitted' in locals() and submitted and not inputs_enabled:
     st.info("Please enter both a valid Support Ticket ID and Email Address to use the advisor.")
