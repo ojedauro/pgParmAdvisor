@@ -1,6 +1,5 @@
 import streamlit as st
 import pandas as pd
-import re
 import json
 import os
 from datetime import datetime
@@ -8,6 +7,22 @@ from datetime import datetime
 # Title
 st.markdown("""
 <style>
+
+/* Azure-themed background and centered layout */
+body {
+    background-color: #f0f8ff;
+}
+.stApp {
+    background-color: #f0f8ff;
+}
+h1, h2, h3, h4, h5, h6 {
+    text-align: center;
+}
+img {
+    display: block;
+    margin-left: auto;
+    margin-right: auto;
+}
 body {
     background-color: #f0f8ff;
 }
@@ -152,7 +167,6 @@ if inputs_enabled:
         table_data["Balanced Profile"].append(recommendations["balanced"][param])
         table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
     df = pd.DataFrame(table_data)
-
 
     # --- Usage Auditing ---
     audit_entry = {
