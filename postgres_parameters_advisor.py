@@ -2,19 +2,12 @@ import streamlit as st
 import pandas as pd
 import json
 import os
+import re
 from datetime import datetime
 
 # Title
 st.markdown("""
 <style>
-
-/* Azure-themed background and centered layout */
-body {
-    background-color: #f0f8ff;
-}
-.stApp {
-    background-color: #f0f8ff;
-}
 h1, h2, h3, h4, h5, h6 {
     text-align: center;
 }
@@ -22,9 +15,6 @@ img {
     display: block;
     margin-left: auto;
     margin-right: auto;
-}
-body {
-    background-color: #f0f8ff;
 }
 </style>
 """, unsafe_allow_html=True)
