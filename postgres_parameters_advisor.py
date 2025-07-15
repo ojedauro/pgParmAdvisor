@@ -176,7 +176,7 @@ if inputs_enabled:
     }
 
     # Azure Blob SAS URL (replace with your actual SAS URL)
-    AZURE_BLOB_SAS_URL = "https://pgparmsadvisorstorage.blob.core.windows.net/publicopened?sp=racwl&st=2025-07-15T15:50:12Z&se=2029-12-31T22:59:59Z&spr=https&sv=2024-11-04&sr=c&sig=ezfcUJD2KXZzH9BHOtl8sgNl5jGIJ0GB6Ao4KXk%2BWxc%3D"
+    AZURE_BLOB_SAS_URL = "https://pgparmsadvisorstorage.blob.core.windows.net/publicopened?st=2025-07-14T22:00:00Z&se=2035-12-31T22:59:59Z&si=openit&spr=https&sv=2024-11-04&sr=c&sig=OuTDIUA7bwWg3wpaFaTF7OarvbSxW4bwiVv938bANIA%3D"
 
     # Try to append the entry to the blob
     try:
