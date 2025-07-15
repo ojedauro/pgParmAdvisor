@@ -77,9 +77,9 @@ with st.sidebar:
 
 def get_recommendations(memory, role):
     base = {
-        "shared_buffers": int(memory * 1024 * 0.25),
         #"work_mem": int(memory * 1024 / max_connections), # Remove dependency of max_connections
         #"maintenance_work_mem": int(memory * 1024 * 0.1),
+        "shared_buffers": int(memory * 1024 * 0.25),
         "effective_cache_size": int(memory * 1024 * 0.75),
         "random_page_cost": 1,
         "default_statistics_target": 100,
@@ -92,28 +92,24 @@ def get_recommendations(memory, role):
     }
 
     if role == "OLTP":
-        factor_general = {"conservative": 0.8, "balanced": 1.0, "aggressive": 1.2}
         factor_random_page_cost = {"conservative": 1.2, "balanced": 1.1, "aggressive": 1.08}
         factor_default_statistics_target = {"conservative": 5, "balanced": 20, "aggressive": 50}
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 16, "balanced": 32, "aggressive": 64}
     elif role == "OLAP":
-        factor_general = {"conservative": 1.0, "balanced": 1.2, "aggressive": 1.5}
         factor_random_page_cost = {"conservative": 1.1, "balanced": 1.08, "aggressive": 1.05} # Favours more full scans than using indexes
         factor_default_statistics_target = {"conservative": 5, "balanced": 10, "aggressive": 30}
         factor_collapse_limits = {"conservative": 1.2, "balanced": 1.5, "aggressive": 2} # Assuming OLAP will have larger queries with more JOINs
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
     elif role == "RAG": # For RAG basically increase memory
-        factor_general = {"conservative": 1, "balanced": 1.25, "aggressive": 1.5}
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
     else:  # Mixed
-        factor_general = {"conservative": 0.9, "balanced": 1.1, "aggressive": 1.3}
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
         factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
@@ -127,8 +123,6 @@ def get_recommendations(memory, role):
     recommendations = {}
     for profile in ["conservative", "balanced", "aggressive"]:
         recommendations[profile] = {
-            #"work_mem": f"{int(base['work_mem'] * factor_general[profile])}kB",
-            #"maintenance_work_mem": f"{int(base['maintenance_work_mem'] * factor_general[profile])}MB",
             #"effective_cache_size": f"{int(base['effective_cache_size'] * factor_general[profile])}MB", # Shash says the default 75% of mem never caused any issues, so leave it
             "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
             "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
@@ -137,10 +131,10 @@ def get_recommendations(memory, role):
             "default_statistics_target": f"{int(base['default_statistics_target'] * factor_default_statistics_target[profile])}",
             "from_collapse_limit": f"{int(base['from_collapse_limit'] * factor_collapse_limits[profile])}",
             "join_collapse_limit": f"{int(base['join_collapse_limit'] * factor_collapse_limits[profile])}",
-            "max_parallel_workers": f"{int(base['max_parallel_workers'] * factor_max_par_workers[profile])}",
-            "max_worker_processes": f"{int(base['max_worker_processes'] * factor_max_par_workers[profile])}",
-            "max_parallel_workers_per_gather": f"{int(base['max_parallel_workers_per_gather'] * factor_max_par_workers_gather[profile])}",
-            "max_parallel_maintenance_workers": f"{int(base['max_parallel_maintenance_workers'] * factor_max_par_workers_gather[profile])}",
+            "max_parallel_workers": f"{int((8 if server_cpus <= 16 else base['max_parallel_workers'] * factor_max_par_workers[profile]))}",
+            "max_worker_processes": f"{int((8 if server_cpus <= 16 else base['max_worker_processes'] * factor_max_par_workers[profile]))}",
+            "max_parallel_workers_per_gather": f"{int((2 if server_cpus <= 8 else base['max_parallel_workers_per_gather'] * factor_max_par_workers_gather[profile]))}",
+            "max_parallel_maintenance_workers": f"{int((2 if server_cpus <= 8 else base['max_parallel_maintenance_workers'] * factor_max_par_workers_gather[profile]))}",
             "autovacuum": f"ON",
         }
     return recommendations
@@ -194,10 +188,9 @@ if 'submitted' in locals() and submitted and inputs_enabled:
         # Append new entry
         new_content = current_content + json.dumps(audit_entry) + "\n"
         put_response = requests.put(AZURE_BLOB_SAS_URL, data=new_content.encode('utf-8'), headers={"x-ms-blob-type": "BlockBlob"})
-        if put_response.status_code in [201, 200]:
-            st.success("Audit entry saved to Azure Blob Storage.")
-        else:
+        if not put_response.status_code in [201, 200]:
             st.error(f"Failed to write audit entry to blob: {put_response.status_code} {put_response.text}")
+
     except Exception as e:
         st.error(f"Failed to write audit entry to Azure Blob: {e}")
 
