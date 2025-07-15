@@ -2,6 +2,7 @@ import streamlit as st
 import pandas as pd
 import json
 import re
+import os
 from datetime import datetime
 
 # Title
@@ -174,10 +175,15 @@ if inputs_enabled:
         "memory_gb": memory_gb,
         "recommendations": recommendations
     }
+
     audit_file = "usage_audit.jsonl"  # JSON Lines format
-    # Append the entry as a single line
-    with open(audit_file, "a", encoding="utf-8") as f:
-        f.write(json.dumps(audit_entry) + "\n")
+    audit_path = os.path.abspath(audit_file)
+    try:
+        with open(audit_file, "a", encoding="utf-8") as f:
+            f.write(json.dumps(audit_entry) + "\n")
+        st.success(f"Audit entry saved to: {audit_path}")
+    except Exception as e:
+        st.error(f"Failed to write audit entry: {e}\nPath attempted: {audit_path}")
 
     st.dataframe(df, hide_index=True, height=500)
     csv = df.to_csv(index=False).encode('utf-8')
