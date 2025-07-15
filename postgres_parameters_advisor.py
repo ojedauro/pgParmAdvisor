@@ -32,19 +32,19 @@ st.markdown(
 with st.sidebar:
     st.markdown('<img src="https://swimburger.net/media/ppnn3pcl/azure.png" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure" />', unsafe_allow_html=True)
     st.header("Input Configuration")
+    support_ticket = st.text_input("Support Ticket ID")
+    email = st.text_input("Email Address")
+    def is_valid_email(email):
+        pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
+        return re.match(pattern, email)
+    inputs_enabled = bool(support_ticket.strip()) and bool(email.strip()) and is_valid_email(email)
+    if not bool(support_ticket.strip()):
+        st.warning("Support Ticket ID is required.")
+    if not bool(email.strip()):
+        st.warning("Email address is required.")
+    elif email and not is_valid_email(email):
+        st.warning("Please enter a valid email address.")
     with st.form(key="input_form"):
-        support_ticket = st.text_input("Support Ticket ID")
-        email = st.text_input("Email Address")
-        def is_valid_email(email):
-            pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
-            return re.match(pattern, email)
-        inputs_enabled = bool(support_ticket.strip()) and bool(email.strip()) and is_valid_email(email)
-        if not bool(support_ticket.strip()):
-            st.warning("Support Ticket ID is required.")
-        if not bool(email.strip()):
-            st.warning("Email address is required.")
-        elif email and not is_valid_email(email):
-            st.warning("Please enter a valid email address.")
         db_role = st.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"], disabled=not inputs_enabled)
         pg_version = st.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
         server_cpus = st.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192], disabled=not inputs_enabled)
