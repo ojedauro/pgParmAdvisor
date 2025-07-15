@@ -29,7 +29,7 @@ st.markdown(
 
 
 # Sidebar inputs
-st.sidebar.markdown('<img src="https://learn.microsoft.com/en-us/media/logos/logo-azure.svg" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure Logo" />', unsafe_allow_html=True)
+st.sidebar.markdown('<img src="https://swimburger.net/media/ppnn3pcl/azure.png" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure" />', unsafe_allow_html=True)
 st.sidebar.header("Input Configuration")
 
 support_ticket = st.sidebar.text_input("Support Ticket ID")
