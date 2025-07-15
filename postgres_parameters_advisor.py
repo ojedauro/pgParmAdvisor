@@ -3,6 +3,7 @@ import pandas as pd
 import json
 import re
 import os
+import requests
 from datetime import datetime
 
 # Title
@@ -27,7 +28,6 @@ st.markdown(
         <img src="https://azure.microsoft.com/svghandler/postgresql?width=100" style="height:60px; width:auto;" alt="PostgreSQL Logo" />
         <h1 style="margin:0;">Parameters Advisor for Azure PostgreSQL Flex Server</h1>
     </div>""", unsafe_allow_html=True)
-
 
 # Sidebar inputs
 st.sidebar.markdown('<img src="https://swimburger.net/media/ppnn3pcl/azure.png" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure" />', unsafe_allow_html=True)
@@ -130,12 +130,12 @@ def get_recommendations(memory, role):
     recommendations = {}
     for profile in ["conservative", "balanced", "aggressive"]:
         recommendations[profile] = {
-            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
             #"work_mem": f"{int(base['work_mem'] * factor_general[profile])}kB",
-            "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
             #"maintenance_work_mem": f"{int(base['maintenance_work_mem'] * factor_general[profile])}MB",
-            "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
             #"effective_cache_size": f"{int(base['effective_cache_size'] * factor_general[profile])}MB", # Shash says the default 75% of mem never caused any issues, so leave it
+            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
+            "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
+            "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
             "random_page_cost": f"{base['random_page_cost'] * factor_random_page_cost[profile]}",
             "default_statistics_target": f"{int(base['default_statistics_target'] * factor_default_statistics_target[profile])}",
             "from_collapse_limit": f"{int(base['from_collapse_limit'] * factor_collapse_limits[profile])}",
@@ -147,7 +147,6 @@ def get_recommendations(memory, role):
             "autovacuum": f"ON",
         }
     return recommendations
-
 
 if inputs_enabled:
     recommendations = get_recommendations(int(memory_gb), db_role)
@@ -176,14 +175,31 @@ if inputs_enabled:
         "recommendations": recommendations
     }
 
-    audit_file = "usage_audit.jsonl"  # JSON Lines format
-    audit_path = os.path.abspath(audit_file)
+    # Azure Blob SAS URL (replace with your actual SAS URL)
+    AZURE_BLOB_SAS_URL = "https://pgparmsadvisorstorage.blob.core.windows.net/publicopened?sp=racwl&st=2025-07-15T15:50:12Z&se=2029-12-31T22:59:59Z&spr=https&sv=2024-11-04&sr=c&sig=ezfcUJD2KXZzH9BHOtl8sgNl5jGIJ0GB6Ao4KXk%2BWxc%3D"
+
+    # Try to append the entry to the blob
     try:
-        with open(audit_file, "a", encoding="utf-8") as f:
-            f.write(json.dumps(audit_entry) + "\n")
-        st.success(f"Audit entry saved to: {audit_path}")
+        # Download current blob content
+        response = requests.get(AZURE_BLOB_SAS_URL)
+        if response.status_code == 200:
+            current_content = response.text
+            if current_content and not current_content.endswith('\n'):
+                current_content += '\n'
+        elif response.status_code == 404:
+            current_content = ''
+        else:
+            raise Exception(f"Failed to read blob: {response.status_code} {response.text}")
+
+        # Append new entry
+        new_content = current_content + json.dumps(audit_entry) + "\n"
+        put_response = requests.put(AZURE_BLOB_SAS_URL, data=new_content.encode('utf-8'), headers={"x-ms-blob-type": "BlockBlob"})
+        if put_response.status_code in [201, 200]:
+            st.success("Audit entry saved to Azure Blob Storage.")
+        else:
+            st.error(f"Failed to write audit entry to blob: {put_response.status_code} {put_response.text}")
     except Exception as e:
-        st.error(f"Failed to write audit entry: {e}\nPath attempted: {audit_path}")
+        st.error(f"Failed to write audit entry to Azure Blob: {e}")
 
     st.dataframe(df, hide_index=True, height=500)
     csv = df.to_csv(index=False).encode('utf-8')
