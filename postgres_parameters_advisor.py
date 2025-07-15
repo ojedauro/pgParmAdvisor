@@ -21,11 +21,11 @@ st.markdown("""
 st.warning('This tool is under testing. Use it at your own risk!', icon="⚠️")
 
 # Custom header with logo left of title
-st.markdown(
-    '''<div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
-        <img src="https://azure.microsoft.com/svghandler/postgresql?width=100" style="height:60px; width:auto;" alt="PostgreSQL Logo" />
+st.markdown("""
+    <div style="display: flex; align-items: center; gap: 20px; margin-bottom: 10px;">
+        <img src="https://azure.microsoft.com/svghandler/postgresql?width=100" style="height:60px; width:auto;" alt="PostgreSQL" />
         <h1 style="margin:0;">Parameters Advisor for Azure PostgreSQL Flex Server</h1>
-    </div>''', unsafe_allow_html=True)
+    </div>""", unsafe_allow_html=True)
 
 # Sidebar inputs
 st.sidebar.header("Input Configuration")
