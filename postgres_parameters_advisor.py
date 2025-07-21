@@ -32,9 +32,10 @@ st.markdown(
 with st.sidebar:
     st.markdown('<img src="https://swimburger.net/media/ppnn3pcl/azure.png" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure" />', unsafe_allow_html=True)
     st.header("Input Configuration")
-    support_ticket = st.text_input("Support Ticket ID")
+
     email = st.text_input("Email Address")
-    
+    support_ticket = st.text_input("Support Ticket ID (optional)")
+
     def is_valid_email(email):
         pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
         return re.match(pattern, email)
