@@ -102,32 +102,35 @@ def get_recommendations(memory, role):
 
     if role == "OLTP":
         factor_random_page_cost = {"conservative": 1.2, "balanced": 1.1, "aggressive": 1.08}
-        factor_default_statistics_target = {"conservative": 5, "balanced": 20, "aggressive": 50}
+        factor_default_statistics_target = {"conservative": 2, "balanced": 5, "aggressive": 10}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 16, "balanced": 32, "aggressive": 64}
         geqo_threshold_setting = {"conservative": 16, "balanced": 20, "aggressive": 24} 
+        factor_max_par_workers_gather = {"conservative": 2, "balanced": 4, "aggressive": 8}
     elif role == "OLAP":
         factor_random_page_cost = {"conservative": 1.1, "balanced": 1.08, "aggressive": 1.05} # Favours more full scans than using indexes
-        factor_default_statistics_target = {"conservative": 5, "balanced": 10, "aggressive": 30}
+        factor_default_statistics_target = {"conservative": 4, "balanced": 8, "aggressive": 16}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
-        geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32} 
+        geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32}
+        factor_max_par_workers_gather = {"conservative": 4, "balanced": 6, "aggressive": 8}
     elif role == "RAG": # For RAG basically increase memory
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
-        factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
+        factor_default_statistics_target = {"conservative": 2, "balanced": 5, "aggressive": 10}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
-        geqo_threshold_setting = {"conservative": 16, "balanced": 22, "aggressive": 28} 
+        geqo_threshold_setting = {"conservative": 16, "balanced": 22, "aggressive": 28}
+        factor_max_par_workers_gather = {"conservative": 4, "balanced": 6, "aggressive": 8}
     else:  # Mixed
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
-        factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
+        factor_default_statistics_target = {"conservative": 2, "balanced": 5, "aggressive": 10}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
-        geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32} 
+        geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32}
+        factor_max_par_workers_gather = {"conservative": 4, "balanced": 6, "aggressive": 8}
 
     factor_max_par_workers = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
-    factor_max_par_workers_gather = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
-    maintenance_work_mem_setting = {"conservative": 1, "balanced": 1, "aggressive": 2} 
+    maintenance_work_mem_setting = {"conservative": 1, "balanced": 1, "aggressive": 2}
 
     recommendations = {}
     for profile in ["conservative", "balanced", "aggressive"]:
@@ -142,9 +145,9 @@ def get_recommendations(memory, role):
             "from_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
             "join_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
             "max_parallel_workers": f"{int((8 if server_cpus <= 16 else base['max_parallel_workers'] * factor_max_par_workers[profile]))}",
-            "max_worker_processes": f"{int((8 if server_cpus <= 16 else base['max_worker_processes'] * factor_max_par_workers[profile]))}",
-            "max_parallel_workers_per_gather": f"{int((2 if server_cpus <= 8 else base['max_parallel_workers_per_gather'] * factor_max_par_workers_gather[profile]))}",
-            "max_parallel_maintenance_workers": f"{int((2 if server_cpus <= 8 else base['max_parallel_maintenance_workers'] * factor_max_par_workers_gather[profile]))}",
+            "max_worker_processes": f"{int(8 if server_cpus <= 8 else server_cpus)}",
+            "max_parallel_workers_per_gather": f"{int(factor_max_par_workers_gather)}",
+            "max_parallel_maintenance_workers": f"{int(factor_max_par_workers_gather)}",
             "autovacuum": f"ON",
         }
     return recommendations
@@ -164,7 +167,7 @@ if 'submitted' in locals() and submitted and inputs_enabled:
         table_data["Conservative Profile"].append(recommendations["conservative"][param])
         table_data["Balanced Profile"].append(recommendations["balanced"][param])
         table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
-        table_data["Apply type"].append("Static" if param in ["shared_buffers", "max_worker_processes"] else ["Dynamic"])
+        table_data["Apply type"].append("Static" if param in ["shared_buffers", "max_worker_processes"] else "Dynamic")
     df = pd.DataFrame(table_data)
 
     # --- Usage Auditing ---
