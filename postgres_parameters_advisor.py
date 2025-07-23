@@ -5,6 +5,7 @@ import re
 import os
 import requests
 from datetime import datetime
+import random
 
 # Title
 st.markdown("""
@@ -90,6 +91,7 @@ def get_recommendations(memory, role):
         "effective_cache_size": int(memory * 1024 * 0.75),
         "random_page_cost": 1,
         "default_statistics_target": 100,
+        "geqo_threshold": 16,
         "from_collapse_limit": 40,
         "join_collapse_limit": 40,
         "max_parallel_workers": (8 if server_cpus <= 16 else server_cpus / 2),
@@ -101,27 +103,27 @@ def get_recommendations(memory, role):
     if role == "OLTP":
         factor_random_page_cost = {"conservative": 1.2, "balanced": 1.1, "aggressive": 1.08}
         factor_default_statistics_target = {"conservative": 5, "balanced": 20, "aggressive": 50}
-        factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         work_mem_setting = {"conservative": 16, "balanced": 32, "aggressive": 64}
+        geqo_threshold_setting = {"conservative": 16, "balanced": 20, "aggressive": 24} 
     elif role == "OLAP":
         factor_random_page_cost = {"conservative": 1.1, "balanced": 1.08, "aggressive": 1.05} # Favours more full scans than using indexes
         factor_default_statistics_target = {"conservative": 5, "balanced": 10, "aggressive": 30}
-        factor_collapse_limits = {"conservative": 1.2, "balanced": 1.5, "aggressive": 2} # Assuming OLAP will have larger queries with more JOINs
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
-        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
+        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
+        geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32} 
     elif role == "RAG": # For RAG basically increase memory
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
-        factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
-        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
+        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
+        geqo_threshold_setting = {"conservative": 16, "balanced": 22, "aggressive": 28} 
     else:  # Mixed
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 10, "balanced": 20, "aggressive": 50}
-        factor_collapse_limits = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
-        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128} 
+        work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
+        geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32} 
 
     factor_max_par_workers = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
     factor_max_par_workers_gather = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
@@ -136,8 +138,9 @@ def get_recommendations(memory, role):
             "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
             "random_page_cost": f"{base['random_page_cost'] * factor_random_page_cost[profile]}",
             "default_statistics_target": f"{int(base['default_statistics_target'] * factor_default_statistics_target[profile])}",
-            "from_collapse_limit": f"{int(base['from_collapse_limit'] * factor_collapse_limits[profile])}",
-            "join_collapse_limit": f"{int(base['join_collapse_limit'] * factor_collapse_limits[profile])}",
+            "geqo_threshold": f"{geqo_threshold_setting[profile]}",  # Assuming geqo_threshold is similar to default_statistics_target
+            "from_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
+            "join_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
             "max_parallel_workers": f"{int((8 if server_cpus <= 16 else base['max_parallel_workers'] * factor_max_par_workers[profile]))}",
             "max_worker_processes": f"{int((8 if server_cpus <= 16 else base['max_worker_processes'] * factor_max_par_workers[profile]))}",
             "max_parallel_workers_per_gather": f"{int((2 if server_cpus <= 8 else base['max_parallel_workers_per_gather'] * factor_max_par_workers_gather[profile]))}",
@@ -153,13 +156,15 @@ if 'submitted' in locals() and submitted and inputs_enabled:
         "Parameter": [],
         "Conservative Profile": [],
         "Balanced Profile": [],
-        "Aggressive Profile": []
+        "Aggressive Profile": [],
+        "Apply type": []
     }
     for param in recommendations["conservative"].keys():
         table_data["Parameter"].append(param)
         table_data["Conservative Profile"].append(recommendations["conservative"][param])
         table_data["Balanced Profile"].append(recommendations["balanced"][param])
         table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
+        table_data["Apply type"].append("Static" if param in ["shared_buffers", "max_worker_processes"] else ["Dynamic"])
     df = pd.DataFrame(table_data)
 
     # --- Usage Auditing ---
