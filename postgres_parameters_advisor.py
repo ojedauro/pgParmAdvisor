@@ -146,8 +146,8 @@ def get_recommendations(memory, role):
             "join_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
             "max_parallel_workers": f"{int((8 if server_cpus <= 16 else base['max_parallel_workers'] * factor_max_par_workers[profile]))}",
             "max_worker_processes": f"{int(8 if server_cpus <= 8 else server_cpus)}",
-            "max_parallel_workers_per_gather": f"{int(factor_max_par_workers_gather)}",
-            "max_parallel_maintenance_workers": f"{int(factor_max_par_workers_gather)}",
+            "max_parallel_workers_per_gather": f"{int(factor_max_par_workers_gather[profile])}",
+            "max_parallel_maintenance_workers": f"{int(factor_max_par_workers_gather[profile])}",
             "autovacuum": f"ON",
         }
     return recommendations
