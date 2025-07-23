@@ -112,8 +112,11 @@ def get_recommendations(memory, role):
         factor_default_statistics_target = {"conservative": 4, "balanced": 8, "aggressive": 16}
         factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
-        geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32}
         factor_max_par_workers_gather = {"conservative": 4, "balanced": 6, "aggressive": 8}
+        if server_cpus <= 8:
+            geqo_threshold_setting = {"conservative": 12, "balanced": 14, "aggressive": 16}
+        else:
+            geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32}
     elif role == "RAG": # For RAG basically increase memory
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 2, "balanced": 5, "aggressive": 10}
@@ -141,9 +144,9 @@ def get_recommendations(memory, role):
             "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
             "random_page_cost": f"{base['random_page_cost'] * factor_random_page_cost[profile]}",
             "default_statistics_target": f"{int(base['default_statistics_target'] * factor_default_statistics_target[profile])}",
-            "geqo_threshold": f"{base['geqo_threshold'] if profile == "OLAP" else geqo_threshold_setting[profile]}",
-            "from_collapse_limit": f"{base['from_collapse_limit'] if profile == "OLAP" else int(geqo_threshold_setting[profile] * 0.75)}",
-            "join_collapse_limit": f"{base['join_collapse_limit'] if profile == "OLAP" else int(geqo_threshold_setting[profile] * 0.75)}",
+            "geqo_threshold": f"{geqo_threshold_setting[profile]}",  # Assuming geqo_threshold is similar to default_statistics_target
+            "from_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
+            "join_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
             "max_parallel_workers": f"{int((8 if server_cpus <= 16 else base['max_parallel_workers'] * factor_max_par_workers[profile]))}",
             "max_worker_processes": f"{int(8 if server_cpus <= 8 else server_cpus)}",
             "max_parallel_workers_per_gather": f"{int(2 if server_cpus <= 8 else factor_max_par_workers_gather[profile])}",
