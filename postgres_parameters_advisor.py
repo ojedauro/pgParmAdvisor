@@ -146,11 +146,30 @@ def get_recommendations(memory, role):
     factor_max_par_workers = {"conservative": 1, "balanced": 1.5, "aggressive": 2}
     maintenance_work_mem_setting = {"conservative": 1, "balanced": 1, "aggressive": 2}
 
+    # Determine max_connections based on memory size
+    def get_max_connections(memory_gb):
+        if memory_gb == 2:
+            return 50
+        elif memory_gb == 4:
+            return 429
+        elif memory_gb == 8:
+            return 859
+        elif memory_gb == 16:
+            return 1718
+        elif memory_gb == 32:
+            return 3437
+        elif memory_gb > 32:
+            return 5000
+        else:
+            return 100  # fallback default
+
     recommendations = {}
     for profile in ["conservative", "balanced", "aggressive"]:
-        recommendations[profile] = {
+        rec = {
             #"effective_cache_size": f"{int(base['effective_cache_size'] * factor_general[profile])}MB", # Shash says the default 75% of mem never caused any issues, so leave it
             "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
+            "max_worker_processes": f"{int(8 if server_cpus <= 8 else server_cpus)}",
+            "max_connections": str(get_max_connections(memory)),
             "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
             "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
             "random_page_cost": f"{base['random_page_cost'] * factor_random_page_cost[profile]}",
@@ -159,11 +178,11 @@ def get_recommendations(memory, role):
             "from_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
             "join_collapse_limit": f"{int(geqo_threshold_setting[profile] * 0.75)}",
             "max_parallel_workers": f"{int((8 if server_cpus <= 16 else base['max_parallel_workers'] * factor_max_par_workers[profile]))}",
-            "max_worker_processes": f"{int(8 if server_cpus <= 8 else server_cpus)}",
             "max_parallel_workers_per_gather": f"{int(2 if server_cpus <= 8 else factor_max_par_workers_gather[profile])}",
             "max_parallel_maintenance_workers": f"{int(2 if server_cpus <= 8 else factor_max_par_workers_gather[profile])}",
             "autovacuum": f"ON",
         }
+        recommendations[profile] = rec
     return recommendations
 
 # Only process and save when the form is submitted
