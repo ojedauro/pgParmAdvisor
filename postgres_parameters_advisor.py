@@ -55,8 +55,16 @@ with st.sidebar:
     with st.form(key="input_form"):
         db_role = st.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"], disabled=not inputs_enabled)
         pg_version = st.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
-        server_cpus = st.selectbox("CPUs", [1,2,4,8,16,20,32,48,64,96,128,192], disabled=not inputs_enabled)
-        memory_gb = st.selectbox("Memory (GB)", [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832], disabled=not inputs_enabled)
+
+        # Adjust CPU and memory options based on db_role
+        cpu_options = [1,2,4,8,16,20,32,48,64,96,128,192]
+        mem_options = [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832]
+        if db_role == "OLAP":
+            cpu_options = [c for c in cpu_options if c > 4]
+            mem_options = [m for m in mem_options if m > 4]
+
+        server_cpus = st.selectbox("CPUs", cpu_options, disabled=not inputs_enabled)
+        memory_gb = st.selectbox("Memory (GB)", mem_options, disabled=not inputs_enabled)
         submitted = st.form_submit_button("Submit")
 
 #max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_value=10000, value=100) # Shash said the default is 5k max and should be left as it is
