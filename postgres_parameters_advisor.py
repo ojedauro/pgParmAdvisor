@@ -60,8 +60,10 @@ with st.sidebar:
         cpu_options = [1,2,4,8,16,20,32,48,64,96,128,192]
         mem_options = [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832]
         if db_role == "OLAP":
+            # Remove CPUs 1-4 and memory 2,4 for OLAP
             cpu_options = [c for c in cpu_options if c > 4]
             mem_options = [m for m in mem_options if m > 4]
+            st.info("For OLAP workloads, CPUs 1-4 and memory 2GB/4GB are not available.")
 
         server_cpus = st.selectbox("CPUs", cpu_options, disabled=not inputs_enabled)
         memory_gb = st.selectbox("Memory (GB)", mem_options, disabled=not inputs_enabled)
