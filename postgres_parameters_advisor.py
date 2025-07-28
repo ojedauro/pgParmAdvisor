@@ -31,6 +31,7 @@ st.markdown(
     </div>""", unsafe_allow_html=True)
 
 with st.sidebar:
+
     st.markdown('<img src="https://swimburger.net/media/ppnn3pcl/azure.png" style="height:40px; display:block; margin-left:auto; margin-right:auto;" alt="Azure" />', unsafe_allow_html=True)
     st.header("Input Configuration")
 
@@ -40,34 +41,34 @@ with st.sidebar:
     def is_valid_email(email):
         pattern = r"^[\w\.-]+@[\w\.-]+\.\w+$"
         return re.match(pattern, email)
-    
-    # inputs_enabled = bool(support_ticket.strip()) and bool(email.strip()) and is_valid_email(email)
-    # if not bool(support_ticket.strip()):
-    #     st.warning("Support Ticket ID is required.")
-    
-    inputs_enabled = bool(email.strip()) and is_valid_email(email)
 
+    # Only enable db_role selection if email is valid
+    email_valid = bool(email.strip()) and is_valid_email(email)
     if not bool(email.strip()):
         st.warning("Email address is required.")
     elif email and not is_valid_email(email):
         st.warning("Please enter a valid email address.")
 
-    with st.form(key="input_form"):
-        db_role = st.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"], disabled=not inputs_enabled)
-        pg_version = st.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not inputs_enabled)
+    # Step 1: Show Email, Support Ticket, and Database Role
+    db_role = st.selectbox("Database Role", ["OLTP", "OLAP", "RAG", "Mixed"], disabled=not email_valid)
 
-        # Adjust CPU and memory options based on db_role
+    # Step 2: Show CPUs and Memory only after db_role is selected
+    server_cpus = None
+    memory_gb = None
+    pg_version = None
+    submitted = False
+    if db_role:
+        # Only show CPUs and Memory if db_role is selected
         cpu_options = [1,2,4,8,16,20,32,48,64,96,128,192]
         mem_options = [2,4,8,16,32,48,64,80,96,128,160,192,256,384,432,512,672,768,1024,1832]
         if db_role == "OLAP":
-            # Remove CPUs 1-4 and memory 2,4 for OLAP
             cpu_options = [c for c in cpu_options if c > 4]
             mem_options = [m for m in mem_options if m > 4]
             st.info("For OLAP workloads, CPUs 1-4 and memory 2GB/4GB are not available.")
-
-        server_cpus = st.selectbox("CPUs", cpu_options, disabled=not inputs_enabled)
-        memory_gb = st.selectbox("Memory (GB)", mem_options, disabled=not inputs_enabled)
-        submitted = st.form_submit_button("Submit")
+        server_cpus = st.selectbox("CPUs", cpu_options, key="cpus", disabled=not email_valid)
+        memory_gb = st.selectbox("Memory (GB)", mem_options, key="mem", disabled=not email_valid)
+        pg_version = st.selectbox("PostgreSQL Version", ["17", "16", "15", "14", "13", "12"], disabled=not email_valid)
+        submitted = st.button("Submit")
 
 #max_connections = st.sidebar.number_input("Max Connections", min_value=10, max_value=10000, value=100) # Shash said the default is 5k max and should be left as it is
 #server_tier = st.sidebar.selectbox("Server Tier", ["General Purpose", "Memory Optimized", "Compute Optimized"])
@@ -166,7 +167,7 @@ def get_recommendations(memory, role):
     return recommendations
 
 # Only process and save when the form is submitted
-if 'submitted' in locals() and submitted and inputs_enabled:
+if 'submitted' in locals() and submitted and email_valid and server_cpus is not None and memory_gb is not None:
     # If OLAP and CPUs 1-4, show warning instead of table
     if db_role == "OLAP" and server_cpus in [1,2,4]:
         st.warning("For OLAP workloads, CPUs 1-4 are not supported. Please select a higher CPU value.")
@@ -227,5 +228,5 @@ if 'submitted' in locals() and submitted and inputs_enabled:
         st.dataframe(df, hide_index=True, height=500)
         csv = df.to_csv(index=False).encode('utf-8')
         st.download_button("Download CSV", csv, "postgresql_recommendations.csv", "text/csv")
-elif 'submitted' in locals() and submitted and not inputs_enabled:
+elif 'submitted' in locals() and submitted and not email_valid:
     st.info("Please enter both a valid Support Ticket ID and Email Address to use the advisor.")
