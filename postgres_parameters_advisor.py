@@ -167,61 +167,65 @@ def get_recommendations(memory, role):
 
 # Only process and save when the form is submitted
 if 'submitted' in locals() and submitted and inputs_enabled:
-    recommendations = get_recommendations(int(memory_gb), db_role)
-    table_data = {
-        "Parameter": [],
-        "Conservative Profile": [],
-        "Balanced Profile": [],
-        "Aggressive Profile": [],
-        "Apply type": []
-    }
-    for param in recommendations["conservative"].keys():
-        table_data["Parameter"].append(param)
-        table_data["Conservative Profile"].append(recommendations["conservative"][param])
-        table_data["Balanced Profile"].append(recommendations["balanced"][param])
-        table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
-        table_data["Apply type"].append("Static" if param in ["shared_buffers", "max_worker_processes"] else "Dynamic")
-    df = pd.DataFrame(table_data)
+    # If OLAP and CPUs 1-4, show warning instead of table
+    if db_role == "OLAP" and server_cpus in [1,2,4]:
+        st.warning("For OLAP workloads, CPUs 1-4 are not supported. Please select a higher CPU value.")
+    else:
+        recommendations = get_recommendations(int(memory_gb), db_role)
+        table_data = {
+            "Parameter": [],
+            "Conservative Profile": [],
+            "Balanced Profile": [],
+            "Aggressive Profile": [],
+            "Apply type": []
+        }
+        for param in recommendations["conservative"].keys():
+            table_data["Parameter"].append(param)
+            table_data["Conservative Profile"].append(recommendations["conservative"][param])
+            table_data["Balanced Profile"].append(recommendations["balanced"][param])
+            table_data["Aggressive Profile"].append(recommendations["aggressive"][param])
+            table_data["Apply type"].append("Static" if param in ["shared_buffers", "max_worker_processes"] else "Dynamic")
+        df = pd.DataFrame(table_data)
 
-    # --- Usage Auditing ---
-    audit_entry = {
-        "timestamp": datetime.utcnow().isoformat(),
-        "support_ticket": support_ticket,
-        "email": email,
-        "db_role": db_role,
-        "pg_version": pg_version,
-        "server_cpus": server_cpus,
-        "memory_gb": memory_gb,
-        "recommendations": recommendations
-    }
+        # --- Usage Auditing ---
+        audit_entry = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "support_ticket": support_ticket,
+            "email": email,
+            "db_role": db_role,
+            "pg_version": pg_version,
+            "server_cpus": server_cpus,
+            "memory_gb": memory_gb,
+            "recommendations": recommendations
+        }
 
-    # Azure Blob SAS URL
-    AZURE_BLOB_SAS_URL = st.secrets["AZURE_URL"] + st.secrets["AUDIT_FILE"] + "?" + st.secrets["AZURE_TOKEN"] # Get secrets from Streamlit secrets management
+        # Azure Blob SAS URL
+        AZURE_BLOB_SAS_URL = st.secrets["AZURE_URL"] + st.secrets["AUDIT_FILE"] + "?" + st.secrets["AZURE_TOKEN"] # Get secrets from Streamlit secrets management
 
-    # Try to append the entry to the blob
-    try:
-        # Download current blob content
-        response = requests.get(AZURE_BLOB_SAS_URL)
-        if response.status_code == 200:
-            current_content = response.text
-            if current_content and not current_content.endswith('\n'):
-                current_content += '\n'
-        elif response.status_code == 404:
-            current_content = ''
-        else:
-            raise Exception(f"Failed to read blob: {response.status_code} {response.text}")
+        # Try to append the entry to the blob
+        try:
+            # Download current blob content
+            response = requests.get(AZURE_BLOB_SAS_URL)
+            if response.status_code == 200:
+                current_content = response.text
+                if current_content and not current_content.endswith('\n'):
+                    current_content += '\n'
+            elif response.status_code == 404:
+                current_content = ''
+            else:
+                raise Exception(f"Failed to read blob: {response.status_code} {response.text}")
 
-        # Append new entry
-        new_content = current_content + json.dumps(audit_entry) + "\n"
-        put_response = requests.put(AZURE_BLOB_SAS_URL, data=new_content.encode('utf-8'), headers={"x-ms-blob-type": "BlockBlob"})
-        if not put_response.status_code in [201, 200]:
-            st.error(f"Failed to write audit entry to blob: {put_response.status_code} {put_response.text}")
+            # Append new entry
+            new_content = current_content + json.dumps(audit_entry) + "\n"
+            put_response = requests.put(AZURE_BLOB_SAS_URL, data=new_content.encode('utf-8'), headers={"x-ms-blob-type": "BlockBlob"})
+            if not put_response.status_code in [201, 200]:
+                st.error(f"Failed to write audit entry to blob: {put_response.status_code} {put_response.text}")
 
-    except Exception as e:
-        st.error(f"Failed to write audit entry to Azure Blob: {e}")
+        except Exception as e:
+            st.error(f"Failed to write audit entry to Azure Blob: {e}")
 
-    st.dataframe(df, hide_index=True, height=500)
-    csv = df.to_csv(index=False).encode('utf-8')
-    st.download_button("Download CSV", csv, "postgresql_recommendations.csv", "text/csv")
+        st.dataframe(df, hide_index=True, height=500)
+        csv = df.to_csv(index=False).encode('utf-8')
+        st.download_button("Download CSV", csv, "postgresql_recommendations.csv", "text/csv")
 elif 'submitted' in locals() and submitted and not inputs_enabled:
     st.info("Please enter both a valid Support Ticket ID and Email Address to use the advisor.")
