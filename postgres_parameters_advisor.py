@@ -167,11 +167,11 @@ def get_recommendations(memory, role):
     for profile in ["conservative", "balanced", "aggressive"]:
         rec = {
             #"effective_cache_size": f"{int(base['effective_cache_size'] * factor_general[profile])}MB", # Shash says the default 75% of mem never caused any issues, so leave it
-            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}MB",
+            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile] * 1024)}",
             "max_worker_processes": f"{int(8 if server_cpus <= 8 else server_cpus)}",
             "max_connections": str(get_max_connections(memory)),
-            "work_mem": f"{int(work_mem_setting[profile] * 1024)}kB",
-            "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024)}MB",
+            "work_mem": f"{int(work_mem_setting[profile] * 1024)}",
+            "maintenance_work_mem": f"{int(maintenance_work_mem_setting[profile] * 1024 * 1024)}",
             "random_page_cost": f"{base['random_page_cost'] * factor_random_page_cost[profile]}",
             "default_statistics_target": f"{int(base['default_statistics_target'] * factor_default_statistics_target[profile])}",
             "geqo_threshold": f"{geqo_threshold_setting[profile]}",  # Assuming geqo_threshold is similar to default_statistics_target
