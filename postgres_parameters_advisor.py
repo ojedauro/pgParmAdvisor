@@ -98,7 +98,7 @@ def get_recommendations(memory, role):
     base = {
         #"work_mem": int(memory * 1024 / max_connections), # Remove dependency of max_connections
         #"maintenance_work_mem": int(memory * 1024 * 0.1),
-        "shared_buffers": int(memory * 1024 * 0.25),
+        "shared_buffers": int(memory * 32768), # https://learn.microsoft.com/en-us/azure/postgresql/flexible-server/server-parameters-table-resource-usage-memory?pivots=postgresql-15#shared_buffers
         "effective_cache_size": int(memory * 1024 * 0.75),
         "random_page_cost": 1,
         "default_statistics_target": 100,
@@ -114,14 +114,14 @@ def get_recommendations(memory, role):
     if role == "OLTP":
         factor_random_page_cost = {"conservative": 1.2, "balanced": 1.1, "aggressive": 1.08}
         factor_default_statistics_target = {"conservative": 2, "balanced": 5, "aggressive": 10}
-        factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        factor_shared_buffers = {"conservative": 0.9, "balanced": 1, "aggressive": 1.1}
         work_mem_setting = {"conservative": 16, "balanced": 32, "aggressive": 64}
         geqo_threshold_setting = {"conservative": 16, "balanced": 20, "aggressive": 24} 
         factor_max_par_workers_gather = {"conservative": 2, "balanced": 4, "aggressive": 8}
     elif role == "OLAP":
         factor_random_page_cost = {"conservative": 1.1, "balanced": 1.08, "aggressive": 1.05} # Favours more full scans than using indexes
         factor_default_statistics_target = {"conservative": 4, "balanced": 8, "aggressive": 16}
-        factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
+        factor_shared_buffers = {"conservative": 0.9, "balanced": 1, "aggressive": 1.1}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
         factor_max_par_workers_gather = {"conservative": 4, "balanced": 6, "aggressive": 8}
         if server_cpus <= 8:
@@ -131,14 +131,14 @@ def get_recommendations(memory, role):
     elif role == "RAG": # For RAG basically increase memory
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 2, "balanced": 5, "aggressive": 10}
-        factor_shared_buffers = {"conservative": 1, "balanced": 1.25, "aggressive": 1.6}
+        factor_shared_buffers = {"conservative": 0.9, "balanced": 1, "aggressive": 1.1}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
         geqo_threshold_setting = {"conservative": 16, "balanced": 22, "aggressive": 28}
         factor_max_par_workers_gather = {"conservative": 4, "balanced": 6, "aggressive": 8}
     else:  # Mixed
         factor_random_page_cost = {"conservative": 1.15, "balanced": 1.1, "aggressive": 1.1}
         factor_default_statistics_target = {"conservative": 2, "balanced": 5, "aggressive": 10}
-        factor_shared_buffers = {"conservative": 1, "balanced": 1.2, "aggressive": 1.5}
+        factor_shared_buffers = {"conservative": 0.9, "balanced": 1, "aggressive": 1.1}
         work_mem_setting = {"conservative": 32, "balanced": 64, "aggressive": 128}
         geqo_threshold_setting = {"conservative": 16, "balanced": 24, "aggressive": 32}
         factor_max_par_workers_gather = {"conservative": 4, "balanced": 6, "aggressive": 8}
@@ -167,7 +167,7 @@ def get_recommendations(memory, role):
     for profile in ["conservative", "balanced", "aggressive"]:
         rec = {
             #"effective_cache_size": f"{int(base['effective_cache_size'] * factor_general[profile])}MB", # Shash says the default 75% of mem never caused any issues, so leave it
-            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile] * 1024)}",
+            "shared_buffers": f"{int(base['shared_buffers'] * factor_shared_buffers[profile])}",
             "max_worker_processes": f"{int(8 if server_cpus <= 8 else server_cpus)}",
             "max_connections": str(get_max_connections(memory)),
             "work_mem": f"{int(work_mem_setting[profile] * 1024)}",
